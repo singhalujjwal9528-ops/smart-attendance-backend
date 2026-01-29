@@ -1,0 +1,82 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Attendance</title>
+</head>
+
+<body>
+  <h2>Student Attendance – Face Verification</h2>
+
+  <video id="video" autoplay muted width="320" height="240"></video>
+  <br><br>
+
+  <button onclick="startFaceDetection()">Verify Face</button>
+  <p id="status">Face not verified</p>
+
+  <br>
+  <button onclick="markAttendance()">Mark Attendance</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+  <script>
+    let faceVerified = false;
+
+    const videoElement = document.getElementById("video");
+    const statusText = document.getElementById("status");
+
+    const faceDetection = new FaceDetection({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`,
+    });
+
+    faceDetection.setOptions({
+      model: "short",
+      minDetectionConfidence: 0.6,
+    });
+
+    faceDetection.onResults((results) => {
+      if (results.detections && results.detections.length > 0) {
+        faceVerified = true;
+        statusText.innerText = "✅ Face detected";
+      } else {
+        faceVerified = false;
+        statusText.innerText = "❌ No face detected";
+      }
+    });
+
+    function startFaceDetection() {
+      const camera = new Camera(videoElement, {
+        onFrame: async () => {
+          await faceDetection.send({ image: videoElement });
+        },
+        width: 320,
+        height: 240,
+      });
+      camera.start();
+    }
+
+    function markAttendance() {
+      if (!faceVerified) {
+        alert("Face not verified!");
+        return;
+      }
+
+      fetch("http://localhost:5000/api/attendance/mark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          classId: "CS101",
+          studentId: "STU003",
+          sessionId: "sess_1769711729745 ",
+          faceVerified: true
+        }),
+      })
+        .then(res => res.json())
+        .then(data => alert(data.message))
+        .catch(err => alert("Error"));
+    }
+  </script>
+</body>
+</html>
